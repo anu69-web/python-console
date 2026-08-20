@@ -497,45 +497,9 @@ builtins.input = _sync_input
   });
 
   // =========================================================================
-  // Send Code to Telegram Bot (Background API Delivery without closing WebApp)
   // =========================================================================
-  const DEFAULT_BOT_TOKEN = '8762281889:AAGSH5DtvALYnz6_X7vdyZE2EKbrYQXdMHM';
-
-  function escapeHtml(str) {
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  }
-
-  function getTelegramUserId() {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('chat_id')) return urlParams.get('chat_id');
-    if (urlParams.get('user_id')) return urlParams.get('user_id');
-
-    const tg = window.Telegram?.WebApp;
-    if (tg?.initDataUnsafe?.user?.id) {
-      return tg.initDataUnsafe.user.id;
-    }
-
-    if (tg?.initData) {
-      try {
-        const initParams = new URLSearchParams(tg.initData);
-        const userStr = initParams.get('user');
-        if (userStr) {
-          const userObj = JSON.parse(userStr);
-          if (userObj?.id) return userObj.id;
-        }
-      } catch (e) {
-        console.warn('Could not parse initData user:', e);
-      }
-    }
-
-    return null;
-  }
-
+  // 10. Send Code to Telegram Bot (Secure & Token-Free)
+  // =========================================================================
   DOM.btnSendBot.addEventListener('click', async () => {
     triggerHaptic('medium');
     const code = editor.getValue().trim();
@@ -544,48 +508,32 @@ builtins.input = _sync_input
       return;
     }
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token') || DEFAULT_BOT_TOKEN;
-    const targetChatId = getTelegramUserId();
+    const tg = window.Telegram?.WebApp;
 
-    if (targetChatId) {
-      DOM.btnSendBot.disabled = true;
-      showToast('🚀 Sending code to Telegram...');
+    if (tg) {
       try {
-        const htmlText = `🐍 <b>Code from Python Console:</b>\n\n<pre><code class="language-python">${escapeHtml(code)}</code></pre>\n\n<i>To execute in chat, copy and send /run</i>`;
-        const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id: targetChatId,
-            text: htmlText,
-            parse_mode: 'HTML'
-          })
-        });
-        const data = await res.json();
-        if (data.ok) {
-          showToast('✅ Code sent to your Telegram chat!');
-          if (window.Telegram?.WebApp?.HapticFeedback) {
-            window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-          }
-        } else {
-          console.warn('Telegram API response error:', data);
-          showToast(`⚠️ Telegram: ${data.description || 'Could not deliver'}`);
+        // 1. Try native WebApp sendData (securely routed via Telegram client without tokens)
+        tg.sendData(JSON.stringify({ code: code }));
+        showToast('✅ Code sent to Telegram bot!');
+        if (tg.HapticFeedback) {
+          tg.HapticFeedback.notificationOccurred('success');
         }
-      } catch (err) {
-        console.error('Direct sendMessage error:', err);
-        showToast('❌ Network error sending to Telegram.');
-      } finally {
-        DOM.btnSendBot.disabled = false;
+        return;
+      } catch (e) {
+        console.log('sendData fallback required:', e);
       }
-    } else {
-      // Outside Telegram environment - copy to clipboard
-      try {
-        await navigator.clipboard.writeText(code);
-        showToast('📋 Code copied to clipboard! Paste into @py_runbot');
-      } catch (err) {
-        showToast('📋 Code copied!');
+    }
+
+    // 2. Fallback: Copy /run command to clipboard for instant execution in chat
+    try {
+      const runCommandText = `/run\n${code}`;
+      await navigator.clipboard.writeText(runCommandText);
+      showToast('📋 Copied as /run command! Paste into @py_runbot');
+      if (tg?.HapticFeedback) {
+        tg.HapticFeedback.notificationOccurred('success');
       }
+    } catch (err) {
+      showToast('📋 Code copied to clipboard!');
     }
   });
 
