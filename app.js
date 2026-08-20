@@ -291,57 +291,34 @@ wizard.attack(warrior, 50)
   }
 
   // =========================================================================
-  // 6. Pyodide Engine Initialization & Async Stdin Hook
+  // 6. Pyodide Engine Initialization & Stdin Hook
   // =========================================================================
+  let lastPromptNotice = '';
+
   async function initPyodide() {
     try {
       DOM.engineStatusText.textContent = 'Downloading Python Engine...';
       
       pyodideInstance = await loadPyodide({
-        stdout: (text) => appendOutput(text + '\n', 'out-stdout'),
+        stdout: (text) => {
+          appendOutput(text + '\n', 'out-stdout');
+          lastPromptNotice = text.trim();
+        },
         stderr: (text) => appendOutput(text + '\n', 'out-stderr'),
       });
 
-      // Synchronous Stdin fallback & interactive prompt handler
+      // Synchronous Stdin hook for Python input()
+      // Native window.prompt pauses execution synchronously and returns a real string
       pyodideInstance.setStdin({
         stdin: () => {
-          const val = prompt('Python input() required:');
-          return val !== null ? val : '';
+          const promptMsg = lastPromptNotice || 'Python input required:';
+          const val = window.prompt(promptMsg);
+          const result = val !== null ? val : '';
+          appendOutput(result + '\n', 'out-prompt');
+          lastPromptNotice = '';
+          return result + '\n';
         }
       });
-
-      // Expose custom async input function to JS bridge
-      window.__pythonConsoleInput = function (promptText) {
-        return new Promise((resolve) => {
-          DOM.inputPromptLabel.textContent = promptText || 'Input required:';
-          DOM.inputPromptField.value = '';
-          DOM.inputPromptBox.classList.remove('hidden');
-          DOM.inputPromptField.focus();
-
-          activeInputResolver = (val) => {
-            DOM.inputPromptBox.classList.add('hidden');
-            appendOutput((promptText || '') + val + '\n', 'out-prompt');
-            resolve(val);
-          };
-        });
-      };
-
-      // Patch Python builtins.input with asynchronous bridge
-      await pyodideInstance.runPythonAsync(`
-import builtins
-import js
-
-_native_input = builtins.input
-
-async def _web_async_input(prompt=""):
-    try:
-        val = await js.__pythonConsoleInput(str(prompt))
-        return str(val)
-    except Exception:
-        return _native_input(prompt)
-
-builtins.input = _web_async_input
-`);
 
       isPyodideReady = true;
       DOM.engineStatusText.textContent = 'Python 3.12 Ready';

@@ -647,9 +647,9 @@ html, body {
 @media (max-width: 768px) {
   .workspace-container {
     grid-template-columns: 1fr;
-    grid-template-rows: 1fr 1fr;
-    padding: 8px;
-    gap: 8px;
+    grid-template-rows: minmax(0, 1fr) minmax(130px, 175px);
+    padding: 6px;
+    gap: 6px;
   }
 
   .hide-mobile {
@@ -657,10 +657,71 @@ html, body {
   }
 
   .app-header {
-    padding: 0 12px;
+    height: 48px;
+    padding: 0 10px;
+  }
+
+  .header-title h1 {
+    font-size: 14px;
+  }
+
+  .logo-badge {
+    width: 30px;
+    height: 30px;
+    font-size: 17px;
+  }
+
+  .btn {
+    padding: 6px 11px;
+    font-size: 12px;
   }
 
   .panel-header {
+    height: 34px;
     padding: 0 8px;
   }
+
+  .panel-tab {
+    font-size: 11px;
+  }
+
+  .panel-title {
+    font-size: 11px;
+  }
+
+  .dropdown-select {
+    padding: 3px 18px 3px 6px;
+    font-size: 10.5px;
+  }
+
+  .icon-btn {
+    width: 25px;
+    height: 25px;
+    font-size: 11px;
+  }
+
+  .quick-symbols-bar {
+    height: 32px;
+    gap: 3px;
+    padding: 0 6px;
+  }
+
+  .sym-btn {
+    height: 24px;
+    min-width: 25px;
+    font-size: 11px;
+    padding: 0 5px;
+  }
+
+  .terminal-body {
+    padding: 8px 10px;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .welcome-badge {
+    font-size: 10px;
+    padding: 2px 8px;
+  }
 }
+
