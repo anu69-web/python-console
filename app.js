@@ -497,7 +497,7 @@ builtins.input = _sync_input
   });
 
   // =========================================================================
-  // Send Code to Telegram Bot
+  // Send Code to Telegram Bot (Background API Delivery without closing WebApp)
   // =========================================================================
   const DEFAULT_BOT_TOKEN = '8762281889:AAGSH5DtvALYnz6_X7vdyZE2EKbrYQXdMHM';
 
@@ -510,6 +510,32 @@ builtins.input = _sync_input
       .replace(/'/g, '&#039;');
   }
 
+  function getTelegramUserId() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('chat_id')) return urlParams.get('chat_id');
+    if (urlParams.get('user_id')) return urlParams.get('user_id');
+
+    const tg = window.Telegram?.WebApp;
+    if (tg?.initDataUnsafe?.user?.id) {
+      return tg.initDataUnsafe.user.id;
+    }
+
+    if (tg?.initData) {
+      try {
+        const initParams = new URLSearchParams(tg.initData);
+        const userStr = initParams.get('user');
+        if (userStr) {
+          const userObj = JSON.parse(userStr);
+          if (userObj?.id) return userObj.id;
+        }
+      } catch (e) {
+        console.warn('Could not parse initData user:', e);
+      }
+    }
+
+    return null;
+  }
+
   DOM.btnSendBot.addEventListener('click', async () => {
     triggerHaptic('medium');
     const code = editor.getValue().trim();
@@ -520,10 +546,9 @@ builtins.input = _sync_input
 
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token') || DEFAULT_BOT_TOKEN;
-    const chatId = urlParams.get('chat_id') || urlParams.get('user_id') || (window.Telegram?.WebApp?.initDataUnsafe?.user?.id);
+    const targetChatId = getTelegramUserId();
 
-    // 1. Direct Telegram Bot API sendMessage if token and chat are present
-    if (token && chatId) {
+    if (targetChatId) {
       DOM.btnSendBot.disabled = true;
       showToast('🚀 Sending code to Telegram...');
       try {
@@ -532,7 +557,7 @@ builtins.input = _sync_input
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            chat_id: chatId,
+            chat_id: targetChatId,
             text: htmlText,
             parse_mode: 'HTML'
           })
@@ -543,59 +568,26 @@ builtins.input = _sync_input
           if (window.Telegram?.WebApp?.HapticFeedback) {
             window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
           }
-          DOM.btnSendBot.disabled = false;
-          return;
         } else {
           console.warn('Telegram API response error:', data);
           showToast(`⚠️ Telegram: ${data.description || 'Could not deliver'}`);
         }
       } catch (err) {
         console.error('Direct sendMessage error:', err);
+        showToast('❌ Network error sending to Telegram.');
       } finally {
         DOM.btnSendBot.disabled = false;
       }
-    }
-
-    // 2. Try Telegram.WebApp.sendData (available if launched from reply keyboard)
-    let sendDataSuccess = false;
-    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.sendData) {
+    } else {
+      // Outside Telegram environment - copy to clipboard
       try {
-        const payload = JSON.stringify({
-          action: 'run_python',
-          code: code,
-          source: 'web_app'
-        });
-        window.Telegram.WebApp.sendData(payload);
-        sendDataSuccess = true;
+        await navigator.clipboard.writeText(code);
+        showToast('📋 Code copied to clipboard! Paste into @py_runbot');
       } catch (err) {
-        console.log('sendData not supported in this launch mode:', err);
+        showToast('📋 Code copied!');
       }
     }
-
-    if (sendDataSuccess) {
-      showToast('🚀 Sent code to Telegram Bot!');
-      return;
-    }
-
-    // 3. Fallback: Telegram Share URL pre-filled with the code
-    const shareText = encodeURIComponent('/run\n' + code);
-    const shareUrl = `https://t.me/share/url?url=&text=${shareText}`;
-
-    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
-      window.Telegram.WebApp.openTelegramLink(shareUrl);
-      showToast('📋 Opening Telegram to send code...');
-    } else {
-      fallbackSend(code, shareUrl);
-    }
   });
-
-  function fallbackSend(code, shareUrl) {
-    navigator.clipboard.writeText(code);
-    if (shareUrl) {
-      window.open(shareUrl, '_blank');
-    }
-    showToast('📋 Code copied! Ready to paste into Telegram.');
-  }
 
   // Toast Notification System
   function showToast(message) {
