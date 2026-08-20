@@ -18,7 +18,8 @@ An interactive, responsive in-browser Python IDE and compiler built for Telegram
   - "Send to Bot" action button passing code snippets back to Telegram chat sessions.
 
 ## Live Deployment
-- **URL**: `https://anu69-web.github.io/python-console/`
+- **Web URL**: [https://anu69-web.github.io/python-console/](https://anu69-web.github.io/python-console/)
+- **Telegram Web App Direct Link**: [t.me/py_runbot/console](https://t.me/py_runbot/console)
 
 ## Telegram Bot Integration
-Linked with `telegram-bots/bot.py` via `MenuButtonWebApp` and `/console` commands.
+Linked with `telegram-bots/bot.py` via `MenuButtonWebApp`, direct short link `t.me/py_runbot/console`, and `/console` commands.
