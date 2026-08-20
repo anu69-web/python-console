@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Python Console - Interactive Web Compiler</title>
+  <meta name="description" content="A fast, interactive Python compiler and runner for Telegram with smart auto-indentation, auto-complete, and instant execution." />
+
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- CodeMirror Styles -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.css">
+
+  <!-- Application CSS -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- CodeMirror Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/anyword-hint.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
+
+  <!-- Pyodide (Python WebAssembly) -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js"></script>
+</head>
+<body>
+  <div id="app-root">
+    <!-- Navigation Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="logo-badge">
+          <i class="fa-brands fa-python"></i>
+        </div>
+        <div class="header-title">
+          <h1>Python Console</h1>
+          <span class="engine-badge" id="engine-status">
+            <span class="pulse-dot"></span> <span id="engine-status-text">Loading Engine...</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button id="btn-run" class="btn btn-primary" title="Run Code (Ctrl + Enter)">
+          <i class="fa-solid fa-play"></i>
+          <span>Run</span>
+        </button>
+        <button id="btn-send-bot" class="btn btn-secondary" title="Send Code to Telegram Bot">
+          <i class="fa-solid fa-paper-plane"></i>
+          <span class="hide-mobile">Send to Bot</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="workspace-container">
+      <!-- Editor Column -->
+      <section class="panel editor-panel">
+        <div class="panel-header">
+          <div class="panel-tab active">
+            <i class="fa-brands fa-python"></i>
+            <span>main.py</span>
+          </div>
+
+          <div class="panel-toolbar">
+            <!-- Snippet Selector -->
+            <div class="select-wrapper">
+              <select id="snippet-select" class="dropdown-select" title="Load Example Snippet">
+                <option value="" disabled selected>⚡ Examples</option>
+                <option value="hello">👋 Hello World</option>
+                <option value="input_demo">💬 Interactive Input</option>
+                <option value="fibonacci">🔢 Fibonacci Series</option>
+                <option value="prime_sieve">⚡ Prime Sieve</option>
+                <option value="ascii_art">🎨 ASCII Diamond</option>
+                <option value="calculator">🧮 Math & Statistics</option>
+                <option value="oop_demo">🏗️ OOP & Classes</option>
+              </select>
+            </div>
+
+            <!-- Font Size Adjusters -->
+            <button id="btn-font-dec" class="icon-btn" title="Decrease Font Size"><i class="fa-solid fa-minus"></i></button>
+            <button id="btn-font-inc" class="icon-btn" title="Increase Font Size"><i class="fa-solid fa-plus"></i></button>
+            
+            <!-- Code Action Buttons -->
+            <button id="btn-copy-code" class="icon-btn" title="Copy Code"><i class="fa-regular fa-copy"></i></button>
+            <button id="btn-clear-code" class="icon-btn" title="Clear Code"><i class="fa-regular fa-trash-can"></i></button>
+          </div>
+        </div>
+
+        <!-- CodeMirror Editor Container -->
+        <div class="editor-wrapper" id="editor-container"></div>
+
+        <!-- Mobile Quick Symbol Access Bar -->
+        <div class="quick-symbols-bar" id="quick-symbols">
+          <button class="sym-btn" data-insert="    ">Tab</button>
+          <button class="sym-btn" data-insert=":">:</button>
+          <button class="sym-btn" data-insert="(">(</button>
+          <button class="sym-btn" data-insert=")">)</button>
+          <button class="sym-btn" data-insert="[">[</button>
+          <button class="sym-btn" data-insert="]">]</button>
+          <button class="sym-btn" data-insert="{">{</button>
+          <button class="sym-btn" data-insert="}">}</button>
+          <button class="sym-btn" data-insert="=">=</button>
+          <button class="sym-btn" data-insert='"'>"</button>
+          <button class="sym-btn" data-insert="'">'</button>
+          <button class="sym-btn" data-insert="_">_</button>
+          <button class="sym-btn" data-insert="#">#</button>
+          <button class="sym-btn" data-insert="+">+</button>
+          <button class="sym-btn" data-insert="-">-</button>
+          <button class="sym-btn" data-insert="*">*</button>
+          <button class="sym-btn" data-insert="/">/</button>
+        </div>
+      </section>
+
+      <!-- Output Terminal Column -->
+      <section class="panel terminal-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <i class="fa-solid fa-terminal"></i>
+            <span>Output Console</span>
+          </div>
+
+          <div class="panel-toolbar">
+            <span id="exec-time-badge" class="exec-badge hidden">
+              <i class="fa-solid fa-clock"></i> <span id="exec-time-text">0ms</span>
+            </span>
+            <button id="btn-copy-output" class="icon-btn" title="Copy Output"><i class="fa-regular fa-copy"></i></button>
+            <button id="btn-clear-output" class="icon-btn" title="Clear Output"><i class="fa-solid fa-eraser"></i></button>
+          </div>
+        </div>
+
+        <!-- Terminal Output Viewport -->
+        <div class="terminal-body" id="terminal-output">
+          <div class="terminal-welcome">
+            <div class="welcome-badge">Python 3.12 • WebAssembly</div>
+            <p>Ready! Write Python code above and click <span class="kbd">Run</span> (or press <span class="kbd">Ctrl+Enter</span>).</p>
+          </div>
+        </div>
+
+        <!-- Inline Prompt Input Banner for input() calls -->
+        <div class="input-prompt-overlay hidden" id="input-prompt-box">
+          <div class="input-prompt-inner">
+            <div class="prompt-label" id="input-prompt-label">Input required:</div>
+            <div class="prompt-input-group">
+              <input type="text" id="input-prompt-field" placeholder="Type your input and press Enter..." autocomplete="off" />
+              <button id="btn-submit-input" class="btn btn-primary"><i class="fa-solid fa-arrow-turn-down"></i></button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
+  </div>
+
+  <!-- Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
