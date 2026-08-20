@@ -27,10 +27,6 @@
     execTimeText: document.getElementById('exec-time-text'),
     btnCopyOutput: document.getElementById('btn-copy-output'),
     btnClearOutput: document.getElementById('btn-clear-output'),
-    inputPromptBox: document.getElementById('input-prompt-box'),
-    inputPromptLabel: document.getElementById('input-prompt-label'),
-    inputPromptField: document.getElementById('input-prompt-field'),
-    btnSubmitInput: document.getElementById('btn-submit-input'),
     toastContainer: document.getElementById('toast-container'),
   };
 
@@ -39,7 +35,6 @@
   let isExecuting = false;
   let editorFontSize = 13.5;
   let editor = null;
-  let activeInputResolver = null;
 
   // =========================================================================
   // 2. Example Code Snippets
@@ -291,34 +286,40 @@ wizard.attack(warrior, 50)
   }
 
   // =========================================================================
-  // 6. Pyodide Engine Initialization & Stdin Hook
+  // 6. Pyodide Engine Initialization & Synchronous Input Bridge
   // =========================================================================
-  let lastPromptNotice = '';
+  window.handlePythonInput = function (promptText) {
+    const p = promptText ? String(promptText) : '';
+    if (p) {
+      appendOutput(p, 'out-stdout');
+    }
+    const displayPrompt = p.trim() ? p.trim() : 'Python input required:';
+    const val = window.prompt(displayPrompt);
+    const result = val !== null ? String(val) : '';
+    appendOutput(result + '\n', 'out-prompt');
+    return result;
+  };
 
   async function initPyodide() {
     try {
       DOM.engineStatusText.textContent = 'Downloading Python Engine...';
       
       pyodideInstance = await loadPyodide({
-        stdout: (text) => {
-          appendOutput(text + '\n', 'out-stdout');
-          lastPromptNotice = text.trim();
-        },
+        stdout: (text) => appendOutput(text + '\n', 'out-stdout'),
         stderr: (text) => appendOutput(text + '\n', 'out-stderr'),
       });
 
-      // Synchronous Stdin hook for Python input()
-      // Native window.prompt pauses execution synchronously and returns a real string
-      pyodideInstance.setStdin({
-        stdin: () => {
-          const promptMsg = lastPromptNotice || 'Python input required:';
-          const val = window.prompt(promptMsg);
-          const result = val !== null ? val : '';
-          appendOutput(result + '\n', 'out-prompt');
-          lastPromptNotice = '';
-          return result + '\n';
-        }
-      });
+      // Patch Python builtins.input with direct synchronous JS bridge
+      await pyodideInstance.runPythonAsync(`
+import builtins
+import js
+
+def _sync_input(prompt=""):
+    p = str(prompt) if prompt is not None else ""
+    return str(js.handlePythonInput(p))
+
+builtins.input = _sync_input
+`);
 
       isPyodideReady = true;
       DOM.engineStatusText.textContent = 'Python 3.12 Ready';
@@ -407,27 +408,7 @@ wizard.attack(warrior, 50)
   }
 
   // =========================================================================
-  // 9. Input Prompt Handlers
-  // =========================================================================
-  function submitInput() {
-    if (activeInputResolver) {
-      const val = DOM.inputPromptField.value;
-      const resolver = activeInputResolver;
-      activeInputResolver = null;
-      resolver(val);
-    }
-  }
-
-  DOM.btnSubmitInput.addEventListener('click', submitInput);
-  DOM.inputPromptField.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      submitInput();
-    }
-  });
-
-  // =========================================================================
-  // 10. UI Actions & Event Listeners
+  // 9. UI Actions & Event Listeners
   // =========================================================================
   DOM.btnRun.addEventListener('click', runCode);
 
