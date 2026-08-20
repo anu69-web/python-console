@@ -496,7 +496,20 @@ builtins.input = _sync_input
     }
   });
 
+  // =========================================================================
   // Send Code to Telegram Bot
+  // =========================================================================
+  const DEFAULT_BOT_TOKEN = '8762281889:AAGSH5DtvALYnz6_X7vdyZE2EKbrYQXdMHM';
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   DOM.btnSendBot.addEventListener('click', async () => {
     triggerHaptic('medium');
     const code = editor.getValue().trim();
@@ -506,7 +519,7 @@ builtins.input = _sync_input
     }
 
     const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
+    const token = urlParams.get('token') || DEFAULT_BOT_TOKEN;
     const chatId = urlParams.get('chat_id') || urlParams.get('user_id') || (window.Telegram?.WebApp?.initDataUnsafe?.user?.id);
 
     // 1. Direct Telegram Bot API sendMessage if token and chat are present
@@ -514,23 +527,27 @@ builtins.input = _sync_input
       DOM.btnSendBot.disabled = true;
       showToast('🚀 Sending code to Telegram...');
       try {
-        const text = `🐍 *Code from Python Console:*\n\n\`\`\`python\n${code}\n\`\`\`\n\nTo run it, copy and send \`/run\``;
+        const htmlText = `🐍 <b>Code from Python Console:</b>\n\n<pre><code class="language-python">${escapeHtml(code)}</code></pre>\n\n<i>To execute in chat, copy and send /run</i>`;
         const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             chat_id: chatId,
-            text: text,
-            parse_mode: 'Markdown'
+            text: htmlText,
+            parse_mode: 'HTML'
           })
         });
         const data = await res.json();
         if (data.ok) {
           showToast('✅ Code sent to your Telegram chat!');
+          if (window.Telegram?.WebApp?.HapticFeedback) {
+            window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+          }
           DOM.btnSendBot.disabled = false;
           return;
         } else {
           console.warn('Telegram API response error:', data);
+          showToast(`⚠️ Telegram: ${data.description || 'Could not deliver'}`);
         }
       } catch (err) {
         console.error('Direct sendMessage error:', err);
