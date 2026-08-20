@@ -498,8 +498,32 @@ builtins.input = _sync_input
 
   // =========================================================================
   // =========================================================================
-  // 10. Send Code to Telegram Bot (Secure & Token-Free)
+  // 10. Send Code to Telegram Bot (Extract User ID & Push Directly)
   // =========================================================================
+  const PYBOT_API_TOKEN = '8762281889:AAGSH5DtvALYnz6_X7vdyZE2EKbrYQXdMHM';
+
+  function getTelegramUserContext() {
+    const tg = window.Telegram?.WebApp;
+    let targetId = null;
+
+    // 1. From Telegram WebApp context
+    if (tg?.initDataUnsafe?.user?.id) {
+      targetId = tg.initDataUnsafe.user.id;
+    } else if (tg?.initDataUnsafe?.chat?.id) {
+      targetId = tg.initDataUnsafe.chat.id;
+    }
+
+    // 2. From URL query parameters
+    if (!targetId) {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        targetId = params.get('user_id') || params.get('chat_id');
+      } catch (e) {}
+    }
+
+    return targetId;
+  }
+
   DOM.btnSendBot.addEventListener('click', async () => {
     triggerHaptic('medium');
     const code = editor.getValue().trim();
@@ -509,22 +533,33 @@ builtins.input = _sync_input
     }
 
     const tg = window.Telegram?.WebApp;
+    const targetChatId = getTelegramUserContext();
 
-    if (tg) {
+    // 1. Push directly to Telegram Bot API using extracted user ID
+    if (targetChatId) {
       try {
-        // 1. Try native WebApp sendData (securely routed via Telegram client without tokens)
-        tg.sendData(JSON.stringify({ code: code }));
-        showToast('✅ Code sent to Telegram bot!');
-        if (tg.HapticFeedback) {
-          tg.HapticFeedback.notificationOccurred('success');
+        const res = await fetch(`https://api.telegram.org/bot${PYBOT_API_TOKEN}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: targetChatId,
+            text: `/run\n${code}`
+          })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          showToast('✅ Code sent to Telegram bot!');
+          if (tg?.HapticFeedback) {
+            tg.HapticFeedback.notificationOccurred('success');
+          }
+          return;
         }
-        return;
       } catch (e) {
-        console.log('sendData fallback required:', e);
+        console.warn('API send notice:', e);
       }
     }
 
-    // 2. Fallback: Copy /run command to clipboard for instant execution in chat
+    // 2. Fallback: Copy /run command to clipboard
     try {
       const runCommandText = `/run\n${code}`;
       await navigator.clipboard.writeText(runCommandText);
