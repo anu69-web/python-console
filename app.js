@@ -14,7 +14,6 @@
     engineStatusText: document.getElementById('engine-status-text'),
     pulseDot: document.querySelector('.pulse-dot'),
     btnRun: document.getElementById('btn-run'),
-    btnSendBot: document.getElementById('btn-send-bot'),
     editorContainer: document.getElementById('editor-container'),
     snippetSelect: document.getElementById('snippet-select'),
     btnFontInc: document.getElementById('btn-font-inc'),
@@ -493,47 +492,6 @@ builtins.input = _sync_input
     if (insertText) {
       editor.replaceSelection(insertText, 'end');
       editor.focus();
-    }
-  });
-
-  // =========================================================================
-  // =========================================================================
-  // 10. Send Code to Telegram Bot (Zero-Token WebApp Data Transmission)
-  // =========================================================================
-  DOM.btnSendBot.addEventListener('click', async () => {
-    triggerHaptic('medium');
-    const code = editor.getValue().trim();
-    if (!code) {
-      showToast('⚠️ No code to send.');
-      return;
-    }
-
-    const tg = window.Telegram?.WebApp;
-
-    // 1. Secure Zero-Token Transmission via Telegram WebApp Data Channel
-    if (tg && typeof tg.sendData === 'function') {
-      try {
-        tg.sendData(JSON.stringify({ code: code }));
-        showToast('✅ Code sent to Telegram bot!');
-        if (tg.HapticFeedback) {
-          tg.HapticFeedback.notificationOccurred('success');
-        }
-        return;
-      } catch (e) {
-        console.warn('WebApp sendData notice:', e);
-      }
-    }
-
-    // 2. Standalone Web Browser Fallback: Copy /run command to clipboard
-    try {
-      const runCommandText = `/run\n${code}`;
-      await navigator.clipboard.writeText(runCommandText);
-      showToast('📋 Copied /run snippet to clipboard! Paste into @py_runbot');
-      if (tg?.HapticFeedback) {
-        tg.HapticFeedback.notificationOccurred('success');
-      }
-    } catch (err) {
-      showToast('📋 Code copied to clipboard!');
     }
   });
 
