@@ -1,6 +1,6 @@
 # 🐍 Python Console — In-Browser WebAssembly IDE
 
-[![Live WebApp](https://img.shields.io/badge/Live_WebApp-GitHub_Pages-22272E?style=for-the-badge&logo=githubpages)](https://anu69-web.github.io/python-console/)
+[![Live WebApp](https://img.shields.io/badge/Live_WebApp-GitHub_Pages-22272E?style=for-the-badge&logo=githubpages)](https://anuragsrivastava-dev.github.io/python-console/)
 [![Telegram WebApp](https://img.shields.io/badge/Telegram_WebApp-t.me%2Fpy__runbot%2Fconsole-2CA5E0?style=for-the-badge&logo=telegram)](https://t.me/py_runbot/console)
 [![Engine](https://img.shields.io/badge/Runtime-Pyodide_CPython_3.12_WASM-3776AB?style=for-the-badge&logo=webassembly)](https://pyodide.org/)
 [![Editor](https://img.shields.io/badge/Editor-CodeMirror_5-D83B01?style=for-the-badge)](https://codemirror.net/)
@@ -36,7 +36,7 @@ An interactive, responsive in-browser Python IDE and compiler engineered with **
 
 ## 🚀 Live Deployment & Links
 
-- **Standalone Web URL**: [https://anu69-web.github.io/python-console/](https://anu69-web.github.io/python-console/)
+- **Standalone Web URL**: [https://anuragsrivastava-dev.github.io/python-console/](https://anuragsrivastava-dev.github.io/python-console/)
 - **Telegram WebApp Short Link**: [t.me/py_runbot/console](https://t.me/py_runbot/console)
 
 ---
@@ -51,4 +51,4 @@ Integrated directly with `telegram-bots/bot.py`:
 ---
 
 ## 📄 License
-Open-source software maintained by [anu69-web](https://github.com/anu69-web).
+Open-source software maintained by [anuragsrivastava-dev](https://github.com/anuragsrivastava-dev).
